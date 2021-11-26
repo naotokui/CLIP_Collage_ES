@@ -17,6 +17,12 @@ import math
 import numpy as np
 from joblib import Parallel, delayed
 
+import torch
+import clip
+from sklearn.metrics.pairwise import cosine_similarity
+
+#%%
+
 imagepaths = glob("./images/*.png") # small images that consist of the collage
 NUM_IMAGES = len(imagepaths)
 
@@ -32,10 +38,6 @@ TARGET_TEXT = "an image of a boy"
 
 #%%
 ### Initialize CLIP model
-
-import torch
-import clip
-from sklearn.metrics.pairwise import cosine_similarity
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
