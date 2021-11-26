@@ -1,42 +1,37 @@
 
 #%%
 
+#### 
+#### Optimizing a collage of small images using Genetic Algorithm
+#### based on the output of OpenAI CLIP model.
+####
+#### "Arrange given small images so that it looks like xxxx 
+#### as much as possible"
+####
+
 from glob import glob
 import random
 from PIL import Image
 import IPython.display as ipd
 import math
 import numpy as np
+from joblib import Parallel, delayed
 
-imagepaths = glob("./images/*.png")
+imagepaths = glob("./images/*.png") # small images that consist of the collage
 NUM_IMAGES = len(imagepaths)
 
-CANVAS_SIZE = 1200
-DEFAULT_IMG_WIDTH = 200
+CANVAS_SIZE = 1200 # the size of the collage
 
-GENE_LENGTH = 5
+NUM_IMAGES_IN_GENE = 40 # how many small images in one collage
+DEFAULT_IMG_WIDTH = 200 # how big these small images should be in pixel
 
-# %%
-def draw_gene(genes, canvas):
+GENE_LENGTH = 5 # number of genes for one small image
 
-    for gene in genes:
-        img_index = int(abs(gene[0]) * NUM_IMAGES) % NUM_IMAGES
-        x = int(gene[1] * CANVAS_SIZE)
-        y = int(gene[2] * CANVAS_SIZE)
-        w = pow((gene[3] + 0.5) * DEFAULT_IMG_WIDTH, 2)
-        rot = gene[4] * 360.0
+### This is the target! 
+TARGET_TEXT = "an image of a boy"
 
-
-        impath = imagepaths[img_index]
-        im= Image.open(impath)
-        org_w, org_h = im.size
-        h = int(org_h * (DEFAULT_IMG_WIDTH / org_w))
-        im.thumbnail((DEFAULT_IMG_WIDTH, h))
-        im = im.rotate(rot, expand=True)
-
-        canvas.alpha_composite(im, (x, y))
-    return canvas
-# %%
+#%%
+### Initialize CLIP model
 
 import torch
 import clip
@@ -45,24 +40,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 
-
 # %%
-
-# 
-# image = preprocess(c).unsqueeze(0).to(device)
-# text = clip.tokenize(["image of various fruits", "image of cars"]).to(device)
-
-# with torch.no_grad():
-#     image_features = model.encode_image(image).cpu().numpy()
-#     text_features = model.encode_text(text).cpu().numpy()
-    
-#     sims = cosine_similarity(image_features, text_features)
-#     print(sims)
-# %%
-
-TARGET_TEXT = "an image of a boy"
-
-from joblib import Parallel, delayed
 
 def draw_gene(genes, canvas):
     
@@ -85,9 +63,6 @@ def draw_gene(genes, canvas):
 
         canvas.alpha_composite(im, (x, y))
     return canvas
-
-
-NUM_IMAGES_IN_GENE = 40
 
 class Individual(object):
     
@@ -288,12 +263,4 @@ for x in range(GENERATIONS):
     if pop.done:
         print("Finished at generation:", x, ", Population fitness:", pop.fitness_history[-1])
         break
-# %%
 
-# a = pop.individuals[0]
-# b = pop.individuals[70]
-# print(a.numbers[:30])
-# print(b.numbers[:30])
-# c = [ random.choice(pixel_pair) for pixel_pair in zip(a.numbers, b.numbers)]
-# print(c[:30])
-# %%
