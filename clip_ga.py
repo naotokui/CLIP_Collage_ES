@@ -23,18 +23,18 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 #%%
 
-imagepaths = glob("./images/*.png") # small images that consist of the collage
+imagepaths = glob("./images/fukuwarai/*.png") # small images that consist of the collage
 NUM_IMAGES = len(imagepaths)
 
-CANVAS_SIZE = 1200 # the size of the collage
+CANVAS_SIZE = 900 # the size of the collage
 
-NUM_IMAGES_IN_GENE = 40 # how many small images in one collage
-DEFAULT_IMG_WIDTH = 200 # how big these small images should be in pixel
+NUM_IMAGES_IN_GENE = 12 # how many small images in one collage
+DEFAULT_IMG_WIDTH = 250 # how big these small images should be in pixel
 
 GENE_LENGTH = 5 # number of genes for one small image
 
 ### This is the target! 
-TARGET_TEXT = "an image of a boy"
+TARGET_TEXT = "an illustration of a face of a boy"
 
 #%%
 ### Initialize CLIP model
@@ -150,7 +150,7 @@ class Population(object):
 
     def save_best(self, dir, generation):
         best_indiv = self.get_best_individual()
-        path = os.path.join(dir, "best_%d_%0.4f.png" % (generation, best_indiv.fitness()))
+        path = os.path.join(dir, "%0.4f_best_%d_.png" % (best_indiv.fitness(),generation))
         print("saved at: ", path)
         best_indiv.save_image(path)
 
@@ -244,7 +244,7 @@ class Population(object):
 
 pop_size = 100
 mutate_prob = 0.20
-retain = 0.25
+retain = 0.10
 random_retain = 0.05
 random_gen = 0.05
 elites = 0.05
@@ -259,10 +259,12 @@ for x in range(GENERATIONS):
     print("grade images and breed...")
     pop.grade(generation=x)
     pop.evolve()
-    pop.save_best("output", x)
+    pop.save_best("output_ga", x)
     pop.reset()
 
     if pop.done:
         print("Finished at generation:", x, ", Population fitness:", pop.fitness_history[-1])
         break
 
+
+# %%

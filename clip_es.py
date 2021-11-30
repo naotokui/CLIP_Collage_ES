@@ -11,7 +11,7 @@
 
 from glob import glob
 import random
-from PIL import Image
+from PIL import Image, ImageDraw
 import IPython.display as ipd
 import math
 import numpy as np
@@ -19,7 +19,8 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 import os
 
-os.environ['CUDA_VISIBLE_DEVICES']='2'
+os.environ['CUDA_VISIBLE_DEVICES']='0'
+os.makedirs("./output", exist_ok=True)
 
 import torch
 import clip
@@ -27,18 +28,19 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 #%%
 
-imagepaths = glob("./images/*.png") # small images that consist of the collage
+imagepaths = glob("./images/fukuwarai/*.png") # small images that consist of the collage
 NUM_IMAGES = len(imagepaths)
+print("# of images: ", NUM_IMAGES)
 
 CANVAS_SIZE = 900 # the size of the collage
 
-NUM_IMAGES_IN_GENE = 8 # how many small images in one collage
-DEFAULT_IMG_WIDTH = 250 # how big these small images should be in pixel
+NUM_IMAGES_IN_GENE = 12 # how many small images in one collage
+DEFAULT_IMG_WIDTH = 225 # how big these small images should be in pixel
 
 GENE_LENGTH = 5 # number of genes for one small image
 
 ### This is the target! 
-TARGET_TEXT = "a photo of a surfboard"
+TARGET_TEXT = "a illustration of a face of a boy"
 
 #%%
 ### Initialize CLIP model
@@ -84,7 +86,7 @@ class Individual(object):
     def reset(self):
         self.generated_img = None
         self.fitness_value = -1
-        self.canvas = Image.new('RGBA', (CANVAS_SIZE, CANVAS_SIZE))
+        self.canvas = Image.new('RGBA', (CANVAS_SIZE, CANVAS_SIZE), (255, 255, 255))
 
     def generate_image(self):
         self.generated_img = draw_gene(self.numbers, self.canvas)
@@ -150,7 +152,7 @@ class Population(object):
 
     def save_best(self, dir, prefix, generation):
         best_indiv = self.get_best_individual()
-        path = os.path.join(dir, "%s_%d_%0.4f.png" % (prefix, generation, best_indiv.fitness()))
+        path = os.path.join(dir, "%0.4f_%s_%d.png" % (best_indiv.fitness(), prefix, generation))
         print("saved at: ", path)
         best_indiv.save_image(path)
 
@@ -198,7 +200,7 @@ class Population(object):
         # generate the next gen
         next_gen = []
         for i in range(self.elite):
-            next_gen.append(Individual(self.individuals[i].numbers, self.min_error_weight))
+            next_gen.append(Individual(self.individuals[i].numbers))#, self.min_error_weight))
         for _ in range(self.pop_size - self.elite):
             next_gen.append(Individual(mean_best_indiv_gene, self.error_weight))
         self.error_weight = max(self.min_error_weight, self.error_weight * self.decay_rate)
@@ -234,9 +236,9 @@ class Population(object):
 
 # %%
 
-pop_size = 100
+pop_size = 300
 
-pop = Population(pop_size=pop_size, elite=3, decay_rate=0.99)
+pop = Population(pop_size=pop_size, elite=10, top_k=30, error_weight=0.50, decay_rate=0.99)
 
 SHOW_PLOT = True
 GENERATIONS = 5000
