@@ -2,7 +2,7 @@
 #%%
 
 #### 
-#### Optimizing a collage of small images using Genetic Algorithm
+#### Optimizing a collage of small images using PGPE
 #### based on the output of OpenAI CLIP model.
 ####
 #### "Arrange given small images so that it looks like xxxx 
@@ -20,12 +20,13 @@ from joblib import Parallel, delayed
 from tqdm import tqdm
 import os
 
-os.environ['CUDA_VISIBLE_DEVICES']='0'
-os.makedirs("./output", exist_ok=True)
-
 import torch
 import clip
 from sklearn.metrics.pairwise import cosine_similarity
+
+os.environ['CUDA_VISIBLE_DEVICES']='0'
+os.makedirs("./output", exist_ok=True)
+
 
 #%%
 
@@ -33,7 +34,7 @@ imagepaths = glob("./images/fukuwarai/*.png") # small images that consist of the
 NUM_IMAGES = len(imagepaths)
 print("# of images: ", NUM_IMAGES)
 
-CANVAS_SIZE = 900 # the size of the collage
+CANVAS_SIZE = 900 # the size of the collage canvas
 
 NUM_IMAGES_IN_GENE = NUM_IMAGES # how many small images in one collage
 DEFAULT_IMG_WIDTH = 225 # how big these small images should be in pixel
@@ -163,14 +164,15 @@ import cv2
 import os
 from glob import glob
 
-video_name = './video2.avi'
-images = glob("./test2/*.png")
+video_name = './fukuwarai.avi'
+images = glob("./output/*_fukuwarai.png")
 images = sorted(images)
+frame_rate = 30
 
 frame = cv2.imread(images[0])
 height, width, layers = frame.shape
 
-video = cv2.VideoWriter(video_name, 0, 30, (width,height))
+video = cv2.VideoWriter(video_name, 0, frame_rate, (width,height))
 
 for image_path in images:
     video.write(cv2.imread(image_path))
