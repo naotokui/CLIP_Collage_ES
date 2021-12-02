@@ -30,7 +30,7 @@ os.makedirs("./output", exist_ok=True)
 
 #%%
 
-imagepaths = glob("./images/fukuwarai/*.png") # small images that consist of the collage
+imagepaths = glob("./images/fruits/*.png") # small images that consist of the collage
 NUM_IMAGES = len(imagepaths)
 print("# of images: ", NUM_IMAGES)
 
@@ -41,10 +41,11 @@ DEFAULT_IMG_WIDTH = 225 # how big these small images should be in pixel
 
 GENE_LENGTH = 5 # number of genes for one small image
 
-SOLUTION_LENGTH = GENE_LENGTH * NUM_IMAGES_IN_GENE
+SOLUTION_LENGTH = GENE_LENGTH * NUM_IMAGES_IN_GENE * 2
+NUM_SOLUTIONS = 40
 
 ### This is the target! 
-TARGET_TEXT = "An illustration of a happy face of a boy"
+TARGET_TEXT = "An illustration of a face of a Santa Claus"
 
 #%%
 ### Initialize CLIP model
@@ -56,7 +57,7 @@ model, preprocess = clip.load("ViT-B/32", device=device)
 
 pgpe = PGPE(
     solution_length= SOLUTION_LENGTH,   # A solution vector has the length of 5
-    popsize=20,          # Our population size is 20
+    popsize= NUM_SOLUTIONS,          # Our population size
 
     optimizer='clipup',          # Uncomment these lines if you
     optimizer_config = dict(     # would like to use the ClipUp
@@ -149,7 +150,7 @@ for generation in range(1000):
     # Saving the best
     fitness, canvas = evaluate_solution(pgpe.center, returns_image=True)
     canvas = draw_fitness(canvas, fitness)
-    path = os.path.join("./output", "%04d_%0.4f_fukuwarai.png" % (generation, fitness))
+    path = os.path.join("./output", "%04d_%0.4f_santa_face.png" % (generation, fitness))
     canvas.save(path)
     if generation % 20 == 0:
         ipd.display(canvas)
