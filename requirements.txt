@@ -6,6 +6,7 @@ git+https://github.com/openai/CLIP.git
 torchvision
 scikit-learn
 joblib
+git+https://github.com/nnaisense/pgpelib.git#egg=pgpelib
 
 # For Installing CLIP model
 # $ conda install --yes -c pytorch pytorch=1.7.1 torchvision cudatoolkit=11.0
