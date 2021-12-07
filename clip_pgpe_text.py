@@ -11,7 +11,6 @@
 
 from glob import glob
 from pgpelib import PGPE
-import random
 from PIL import Image, ImageDraw, ImageFont
 import IPython.display as ipd
 import math
@@ -24,34 +23,43 @@ import torch
 import clip
 from sklearn.metrics.pairwise import cosine_similarity
 
-os.environ['CUDA_VISIBLE_DEVICES']='0'
-os.makedirs("./output", exist_ok=True)
+os.environ['CUDA_VISIBLE_DEVICES']='2'
+os.makedirs("./output_text", exist_ok=True)
 
 #%%
 
-imagepaths = glob("./images/fruits/*.png") # small images that consist of the collage
-NUM_IMAGES = len(imagepaths)
-print("# of images: ", NUM_IMAGES)
+ALPHABETS = ["い","ろ","は","に","ほ", "へ", "と", "ち","り","ぬ","る","を","こ"]
+#ALPHABETS = ["A","a", "B", "b", "C", "c", "D", "d", "E", "e", "F","f", "G", "g"]
+ALPHABET_FONT = ImageFont.truetype("ipam.ttf", size=195)
+ALPHABET_SIZE = 200 
+ALPHABET_IMAGES = []
+NUM_IMAGES = len(ALPHABETS)
 
-# load all images
-IMAGE_PATCHES = []
-for path in imagepaths:
-  IMAGE_PATCHES.append(Image.open(path).copy())
+for t in ALPHABETS:
+    canvas = Image.new('RGBA', (ALPHABET_SIZE, ALPHABET_SIZE))
 
+    textcolor = (0, 0, 0) 
+    draw = ImageDraw.Draw(canvas) 
+    draw.text((5, 5), t, font=ALPHABET_FONT, fill=textcolor)
+    ipd.display(canvas)
+    ALPHABET_IMAGES.append(canvas)
 #%%
 
-CANVAS_SIZE = 900 # the size of the collage canvas
+CANVAS_SIZE = 500 # the size of the collage canvas
 
-NUM_IMAGES_IN_GENE = NUM_IMAGES # how many small images in one collage
-DEFAULT_IMG_WIDTH = 225 # how big these small images should be in pixel
+NUM_IMAGES_IN_GENE = NUM_IMAGES  # how many small images in one collage
+DEFAULT_IMG_WIDTH = ALPHABET_SIZE # how big these small images should be in pixel
 
 GENE_LENGTH = 4 # number of genes for one small image
 
-SOLUTION_LENGTH = GENE_LENGTH * NUM_IMAGES_IN_GENE * 2
-NUM_SOLUTIONS = 40
+SOLUTION_LENGTH = GENE_LENGTH * NUM_IMAGES_IN_GENE
+NUM_SOLUTIONS = 200
+
 
 ### This is the target! 
-TARGET_TEXT = "A happy Santa Claus"
+TARGET_TEXT = "An illustration of a face of a sad boy"
+
+OUTPUT_POSTFIX = "text_sad"
 
 #%%
 ### Initialize CLIP model
@@ -71,12 +79,12 @@ pgpe = PGPE(
        momentum=0.9
     ),
 
-    #optimizer='adam',            # Uncomment these lines if you
-    #optimizer_config = dict(     # would like to use the Adam
+    # optimizer='adam',            # Uncomment these lines if you
+    # optimizer_config = dict(     # would like to use the Adam
     #    beta1=0.9,               # optimizer.
     #    beta2=0.999,
     #    epsilon=1e-8
-    #),
+    # ),
 )
 
 #%%
@@ -91,18 +99,19 @@ def draw_gene(genes):
         x = int((gene[0] + 0.5)%1.0  * CANVAS_SIZE)
         y = int((gene[1] + 0.5)%1.0  * CANVAS_SIZE) 
 
-        w_coef = max(0.25, gene[2] + 1.0)
+        w_coef = max(0.25, pow((gene[2] + 1.0), 2.0))
         rot = gene[3] * 360.0
 
-        im= IMAGE_PATCHES[img_index]
-        im = im.rotate(rot, expand=True)
+        im= ALPHABET_IMAGES[img_index].copy()
+        im2 = im.rotate(rot, expand=True)
 
         # impath = imagepaths[img_index]
-        org_w, org_h = im.size
+        org_w, org_h = im2.size
         h = int(org_h * (DEFAULT_IMG_WIDTH / org_w))
-        im.thumbnail((DEFAULT_IMG_WIDTH*w_coef, h*w_coef))
+        im2.thumbnail((DEFAULT_IMG_WIDTH*w_coef, h*w_coef))
         
-        canvas.alpha_composite(im, (x, y))    
+#        canvas.paste(im2, (x - im2.width // 2, y - im2.height // 2), im2)
+        canvas.alpha_composite(im2, (x, y))    
     return canvas
 
 def evaluate_solution(genes, returns_image = False):
@@ -158,7 +167,7 @@ for generation in range(1000):
     # Saving the best
     fitness, canvas = evaluate_solution(pgpe.center, returns_image=True)
     canvas = draw_fitness(canvas, fitness)
-    path = os.path.join("./output", "%04d_%0.4f_santa_face.png" % (generation, fitness))
+    path = os.path.join("./output_text", "%04d_%0.4f_%s.png" % (generation, fitness, OUTPUT_POSTFIX))
     canvas.save(path)
     if generation % 20 == 0:
         ipd.display(canvas)
@@ -173,8 +182,8 @@ import cv2
 import os
 from glob import glob
 
-video_name = './fukuwarai.avi'
-images = glob("./output/*_fukuwarai.png")
+video_name = './text.avi'
+images = glob("./output_text/*_sadS.png")
 images = sorted(images)
 frame_rate = 30
 
@@ -188,4 +197,8 @@ for image_path in images:
 
 #cv2.destroyAllWindows()
 video.release()
+# %%
+!ffmpeg -i {video_name} {video_name}.mp4
+# %%
+
 # %%
