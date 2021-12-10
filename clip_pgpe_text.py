@@ -23,12 +23,12 @@ import torch
 import clip
 from sklearn.metrics.pairwise import cosine_similarity
 
-os.environ['CUDA_VISIBLE_DEVICES']='2'
+os.environ['CUDA_VISIBLE_DEVICES']='1'
 os.makedirs("./output_text", exist_ok=True)
 
 #%%
 
-ALPHABETS = ["い","ろ","は","に","ほ", "へ", "と", "ち","り","ぬ","る","を","こ"]
+ALPHABETS = ["へ","の","へ","の","も", "へ", "じ"]
 #ALPHABETS = ["A","a", "B", "b", "C", "c", "D", "d", "E", "e", "F","f", "G", "g"]
 ALPHABET_FONT = ImageFont.truetype("ipam.ttf", size=195)
 ALPHABET_SIZE = 200 
@@ -57,9 +57,9 @@ NUM_SOLUTIONS = 200
 
 
 ### This is the target! 
-TARGET_TEXT = "An illustration of a face of a sad boy"
+TARGET_TEXT = "a sad cat"
 
-OUTPUT_POSTFIX = "text_sad"
+OUTPUT_POSTFIX = "text_moheji_sadcat"
 
 #%%
 ### Initialize CLIP model
@@ -67,25 +67,6 @@ OUTPUT_POSTFIX = "text_sad"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
 
-#%%
-
-pgpe = PGPE(
-    solution_length= SOLUTION_LENGTH,   # A solution vector has the length of 5
-    popsize= NUM_SOLUTIONS,          # Our population size
-
-    optimizer='clipup',          # Uncomment these lines if you
-    optimizer_config = dict(     # would like to use the ClipUp
-       max_speed=0.15,           # optimizer.
-       momentum=0.9
-    ),
-
-    # optimizer='adam',            # Uncomment these lines if you
-    # optimizer_config = dict(     # would like to use the Adam
-    #    beta1=0.9,               # optimizer.
-    #    beta2=0.999,
-    #    epsilon=1e-8
-    # ),
-)
 
 #%%
 
@@ -96,8 +77,8 @@ def draw_gene(genes):
     for i in range(num_genes):
         gene = genes[i*GENE_LENGTH:(i+1)*GENE_LENGTH]
         img_index = i % NUM_IMAGES #int(abs(gene[0]) * NUM_IMAGES) % NUM_IMAGES
-        x = int((gene[0] + 0.5)%1.0  * CANVAS_SIZE)
-        y = int((gene[1] + 0.5)%1.0  * CANVAS_SIZE) 
+        x = int(max(0.1,min(0.9,(gene[0] + 0.5)%1.0))  * CANVAS_SIZE)
+        y = int(max(0.1,min(0.9,(gene[1] + 0.5)%1.0))  * CANVAS_SIZE) 
 
         w_coef = max(0.25, pow((gene[2] + 1.0), 2.0))
         rot = gene[3] * 360.0
@@ -110,8 +91,8 @@ def draw_gene(genes):
         h = int(org_h * (DEFAULT_IMG_WIDTH / org_w))
         im2.thumbnail((DEFAULT_IMG_WIDTH*w_coef, h*w_coef))
         
-#        canvas.paste(im2, (x - im2.width // 2, y - im2.height // 2), im2)
-        canvas.alpha_composite(im2, (x, y))    
+        canvas.paste(im2, (x - im2.width // 2, y - im2.height // 2), im2)
+        # canvas.alpha_composite(im2, (x, y))    
     return canvas
 
 def evaluate_solution(genes, returns_image = False):
@@ -143,38 +124,67 @@ def draw_fitness(canvas, fitness):
 
 #%%
 
+for trial in range(10):
+    pgpe = PGPE(
+        solution_length= SOLUTION_LENGTH,   # A solution vector has the length of 5
+        popsize= NUM_SOLUTIONS,          # Our population size
 
-# Let us run the evolutionary computation for 1000 generations
-for generation in range(1000):
+        optimizer='clipup',          # Uncomment these lines if you
+        optimizer_config = dict(     # would like to use the ClipUp
+        max_speed=0.15,           # optimizer.
+        momentum=0.9
+        ),
 
-    # Ask for solutions, which are to be given as a list of numpy arrays.
-    # In the case of this example, solutions is a list which contains
-    # 20 numpy arrays, the length of each numpy array being 5.
-    solutions = pgpe.ask()
+        # optimizer='adam',            # Uncomment these lines if you
+        # optimizer_config = dict(     # would like to use the Adam
+        #    beta1=0.9,               # optimizer.
+        #    beta2=0.999,
+        #    epsilon=1e-8
+        # ),
+    )
 
-    # This is the phase where we evaluate the solutions
-    # and prepare a list of fitnesses.
-    # Make sure that fitnesses[i] stores the fitness of solutions[i].
-    fitnesses = Parallel(n_jobs=-1,prefer="threads")(delayed(evaluate_solution)(genes) for genes in solutions)
-    print("generate: %d average: %.4f" % (generation, np.mean(fitnesses)))
-#    fitnesses = [...]  # compute the fitnesses here
+    best_gen  = -100
+    best_fitness = 0.0
+    best_solution = None
+    best_canvas = canvas
+    last_display = best_gen
+    # Let us run the evolutionary computation for 1000 generations
+    for generation in range(750):
 
-    # Now we tell the result of our evaluations, fitnesses,
-    # to our solver, so that it updates the center solution
-    # and the spread of the search distribution.
-    pgpe.tell(fitnesses)
+        # Ask for solutions, which are to be given as a list of numpy arrays.
+        # In the case of this example, solutions is a list which contains
+        # 20 numpy arrays, the length of each numpy array being 5.
+        solutions = pgpe.ask()
 
-    # Saving the best
-    fitness, canvas = evaluate_solution(pgpe.center, returns_image=True)
-    canvas = draw_fitness(canvas, fitness)
-    path = os.path.join("./output_text", "%04d_%0.4f_%s.png" % (generation, fitness, OUTPUT_POSTFIX))
-    canvas.save(path)
-    if generation % 20 == 0:
-        ipd.display(canvas)
+        # This is the phase where we evaluate the solutions
+        # and prepare a list of fitnesses.
+        # Make sure that fitnesses[i] stores the fitness of solutions[i].
+        fitnesses = Parallel(n_jobs=-1,prefer="threads")(delayed(evaluate_solution)(genes) for genes in solutions)
+        print("generate: %d average: %.4f" % (generation, np.mean(fitnesses)))
+    #    fitnesses = [...]  # compute the fitnesses here
+
+        # Now we tell the result of our evaluations, fitnesses,
+        # to our solver, so that it updates the center solution
+        # and the spread of the search distribution.
+        pgpe.tell(fitnesses)
+
+        # Saving the best
+        fitness, canvas = evaluate_solution(pgpe.center, returns_image=True)
+        canvas = draw_fitness(canvas, fitness)
+        if best_fitness < fitness:
+            best_fitness = fitness
+            best_solution = pgpe.center
+            best_canvas = canvas
+            if generation - last_display > 30:
+                ipd.display(canvas)
+                last_display = generation
+            best_gen = generation
     
-# After 1000 generations, we print the center solution.
-print(pgpe.center)
-
+    # After 1000 generations, we print the center solution.
+    print("best generation: %d fitness %.3f" % (best_gen, best_fitness))
+    path = os.path.join("./output_text", "best_%d_%04d_%0.4f_%s.png" % (trial, best_gen, best_fitness, OUTPUT_POSTFIX))
+    best_canvas.save(path)
+    ipd.display(best_canvas)
 
 # %%
 
@@ -182,10 +192,11 @@ import cv2
 import os
 from glob import glob
 
-video_name = './text.avi'
-images = glob("./output_text/*_sadS.png")
+video_name = './moheji.avi'
+images = glob("./output_text/*_moheji2.png")
+print("# of frames", len(images))
 images = sorted(images)
-frame_rate = 30
+frame_rate = 60
 
 frame = cv2.imread(images[0])
 height, width, layers = frame.shape
